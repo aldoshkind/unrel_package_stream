@@ -41,6 +41,29 @@ struct __attribute__((packed)) package_header
 	}
 };
 
+struct __attribute__((packed)) package_ptr : public package_header
+{
+	uint8_t *data_ptr;
+	size_t data_size;
+	checksum_t checksum;
+	package_ptr(uint8_t *data, size_t size)
+	{
+		data_ptr = data;
+		data_size = size;
+		
+		package_size = sizeof(package_header) + size + 1;
+		
+		update_checksum();
+	}
+	
+	void update_checksum()
+	{
+		package_header::update_checksum();
+		checksum_t pl_checksum = get_checksum((uint8_t *) (this), sizeof(package_header), package_header::checksum);
+		checksum = get_checksum(data_ptr, data_size, pl_checksum);
+	}
+};
+
 template<class payload_type>
 struct __attribute__((packed)) package
 {
@@ -58,7 +81,12 @@ struct __attribute__((packed)) package
 	package()
 	{
 		header.package_size = sizeof(*this);
-
+		update_checksum();
+	}
+	
+	package(payload_type p) : payload(p)
+	{
+		header.package_size = sizeof(*this);
 		update_checksum();
 	}
 
@@ -72,6 +100,8 @@ struct __attribute__((packed)) package
 class unpacker
 {
 public:
+	virtual ~unpacker(){}
+	
 	void push_data(char *data, uint8_t size)
 	{
 		for (int i = 0; i < size; i += 1)
@@ -112,10 +142,12 @@ private:
 		return start;
 	}
 
-	virtual void package_ready(package_header *p)
+	void package_ready(package_header *p)
 	{
-		//printf("package\n");
+		datagram_arrived((uint8_t *)&((package<char> *)p)->payload, p->package_size);
 	}
+	
+	virtual void datagram_arrived(uint8_t *data, size_t size) = 0;
 
 	void push_byte(char b)
 	{
