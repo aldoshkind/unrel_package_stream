@@ -11,7 +11,7 @@ public:
 	
 	void set_bytestream(bytestream_base *b)
 	{
-		bytestream->set_listener(NULL);
+		b->set_listener(NULL);
 		bytestream = b;
 		b->set_listener(this);
 	}
@@ -39,6 +39,7 @@ private:
 	void bytes_arrived()
 	{
 		push_data((char *)bytestream->get_data(), bytestream->get_size());
+		bytestream->clear_data();
 	}
 };
 
