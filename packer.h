@@ -3,9 +3,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-//#include <limits>
+#if (__cplusplus >= 201103L)
+#include <limits>
+#endif
 
-#if !(__cplusplus > 199711L)
+#if !(__cplusplus > 201103L)
 #define nullptr NULL
 #endif
 
@@ -30,8 +32,6 @@ static const int max_package_size = 64;
 struct __attribute__((packed)) package_header
 {
 	uint8_t magic = package_magic;
-	uint8_t system = 0;
-	uint8_t op = 0;
 	uint8_t package_size = sizeof(package_header);
 	checksum_t checksum = 0;
 
@@ -41,14 +41,14 @@ struct __attribute__((packed)) package_header
 	}
 };
 
-template<class payload_type, uint8_t sys, uint8_t operation>
+template<class payload_type>
 struct __attribute__((packed)) package
 {
 	package_header header;
 	payload_type payload;
 	checksum_t checksum = 0;
 
-#if __cplusplus > 199711L
+#if (__cplusplus >= 201103L)
 	static_assert(sizeof(payload_type)
 					  < std::numeric_limits<decltype(package_header::package_size)>::max() - sizeof(package_header) - sizeof(checksum),
 				  "payload too big");
@@ -57,8 +57,6 @@ struct __attribute__((packed)) package
 
 	package()
 	{
-		header.system = sys;
-		header.op = operation;
 		header.package_size = sizeof(*this);
 
 		update_checksum();
