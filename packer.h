@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #if (__cplusplus >= 201103L)
 #include <limits>
@@ -31,10 +32,17 @@ static const int max_package_size = 64;
 
 struct __attribute__((packed)) package_header
 {
-	uint8_t magic = package_magic;
-	uint8_t package_size = sizeof(package_header);
-	checksum_t checksum = 0;
+	uint8_t magic;
+	uint8_t package_size;
+	checksum_t checksum;
 
+	package_header()
+	{
+		magic = package_magic;
+		package_size = sizeof(package_header);
+		checksum = 0;
+	}
+	
 	void update_checksum()
 	{
 		checksum = get_checksum((uint8_t *) this, sizeof(package_header) - 1);
@@ -69,7 +77,7 @@ struct __attribute__((packed)) package
 {
 	package_header header;
 	payload_type payload;
-	checksum_t checksum = 0;
+	checksum_t checksum;
 
 #if (__cplusplus >= 201103L)
 	static_assert(sizeof(payload_type)
@@ -100,6 +108,15 @@ struct __attribute__((packed)) package
 class unpacker
 {
 public:
+	unpacker()
+	{
+		memset(buffer, 0, sizeof(buffer));
+		start_pos = -1;
+		lookup_start_pos = 0;
+		push_pos = 0;
+		header_ptr = NULL;
+	}
+
 	virtual ~unpacker(){}
 	
 	void push_data(char *data, uint8_t size)
@@ -111,13 +128,13 @@ public:
 	}
 
 private:
-	char buffer[max_package_size * 2] = {0};
+	char buffer[max_package_size * 2];
 
-	int start_pos = -1;
-	int lookup_start_pos = 0;
-	int push_pos = 0;
+	int start_pos;
+	int lookup_start_pos;
+	int push_pos;
 
-	package_header *header_ptr = nullptr;
+	package_header *header_ptr;
 
 	int available()
 	{
