@@ -2,7 +2,7 @@
 #define UNREL_DATAGRAM_STREAM_H
 
 #include "bytestream_base.h"
-#include "unrel_package_stream/packer.h"
+#include "packer.h"
 
 class unrel_datagram_stream : public bytestream_base::listener, public unpacker
 {
