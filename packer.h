@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PACKER_H
+#define PACKER_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -187,7 +188,7 @@ private:
 
 			if (header_ptr == nullptr)
 			{
-				if (available() >= sizeof(package_header))
+				if (available() >= (int)sizeof(package_header))
 				{
 					checksum_t calculated = get_checksum((uint8_t *) &buffer[start_pos], sizeof(package_header) - 1);
 					header_ptr = (package_header *) &buffer[start_pos];
@@ -244,3 +245,5 @@ private:
 		}
 	}
 };
+
+#endif // PACKER_H

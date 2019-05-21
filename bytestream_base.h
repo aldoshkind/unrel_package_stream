@@ -14,6 +14,11 @@ public:
 		virtual void bytes_arrived() = 0;
 	};
 	
+	bytestream_base()
+	{
+		l = NULL;
+	}
+	
 	virtual ~bytestream_base()
 	{
 		//
@@ -33,7 +38,10 @@ public:
 protected:
 	void notify_data_arrived()
 	{
-		l->bytes_arrived();
+		if(l != NULL)
+		{
+			l->bytes_arrived();
+		}
 	}
 	
 private:
