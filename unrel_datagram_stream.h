@@ -25,9 +25,15 @@ public:
 		
 		package_ptr p(data, size);
 		
-		bytestream->send((uint8_t *)&p, sizeof(package_header));
-		bytestream->send(data, size);
-		bytestream->send((uint8_t *)&p.checksum, sizeof(p.checksum));
+		size_t pack_size = sizeof(package_header) + size + sizeof(p.checksum);
+		char *buf = (char *)malloc(pack_size);
+
+		memcpy(buf, &p, sizeof(package_header));
+		memcpy(buf + sizeof(package_header), data, size);
+		memcpy(buf + sizeof(package_header) + size, &p.checksum, sizeof(p.checksum));
+		
+		bytestream->send((uint8_t *)buf, pack_size);
+		free(buf);
 		
 		return 0;
 	}
