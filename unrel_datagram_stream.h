@@ -7,6 +7,10 @@
 class unrel_datagram_stream : public bytestream_base::listener, public unpacker
 {
 public:
+	unrel_datagram_stream()
+	{
+		bytestream = NULL;
+	}
 	virtual ~unrel_datagram_stream(){}
 	
 	void set_bytestream(bytestream_base *b)
