@@ -44,6 +44,11 @@ struct __attribute__((packed)) package_header
 		checksum = 0;
 	}
 	
+	size_t get_payload_size()
+	{
+		return package_size - sizeof(package_header) - sizeof(checksum_t); 
+	}
+	
 	void update_checksum()
 	{
 		checksum = get_checksum((uint8_t *) this, sizeof(package_header) - 1);
@@ -162,7 +167,7 @@ private:
 
 	void package_ready(package_header *p)
 	{
-		datagram_arrived((uint8_t *)&((package<char> *)p)->payload, p->package_size);
+		datagram_arrived((uint8_t *)&((package<char> *)p)->payload, p->get_payload_size());
 	}
 	
 	virtual void datagram_arrived(uint8_t *data, size_t size) = 0;
