@@ -12,6 +12,8 @@ public:
 	public:
 		virtual ~listener(){}
 		virtual void bytes_arrived() = 0;
+		virtual void device_opened() = 0;
+		virtual void device_closed() = 0;
 	};
 	
 	bytestream_base()
@@ -27,6 +29,10 @@ public:
 	void set_listener(listener *l)
 	{
 		this->l = l;
+		if(is_connected() && l != nullptr)
+		{
+			l->device_opened();
+		}
 	}
 	
 	virtual uint8_t *get_data() = 0;
@@ -43,6 +49,24 @@ protected:
 			l->bytes_arrived();
 		}
 	}
+	
+	void notify_connected()
+	{
+		if(l != NULL)
+		{
+			l->device_opened();
+		}
+	}
+	
+	void notify_disconnected()
+	{
+		if(l != NULL)
+		{
+			l->device_closed();
+		}
+	}
+	
+	virtual bool is_connected()	= 0;
 	
 private:
 	listener *l;
