@@ -29,7 +29,7 @@ public:
 	void set_listener(listener *l)
 	{
 		this->l = l;
-		if(is_connected() && l != nullptr)
+		if(is_connected() && l != NULL)
 		{
 			l->device_opened();
 		}
