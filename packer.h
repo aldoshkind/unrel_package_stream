@@ -194,7 +194,7 @@ private:
 					header_ptr = (package_header *) &buffer[start_pos];
 					checksum_t received = header_ptr->checksum;
 
-					if (calculated != received)
+					if ((calculated != received) || (header_ptr->package_size < (int)sizeof(package_header)) || (header_ptr->package_size > max_package_size))
 					{
 						//printf("wrong header crc\n");
 						lookup_start_pos = (start_pos + 1) % max_package_size;
@@ -219,7 +219,16 @@ private:
 				if (available() >= header_ptr->package_size)
 				{
 					int end_pos = start_pos + header_ptr->package_size;
-					checksum_t calculated = get_checksum((uint8_t *) &buffer[start_pos], (uint8_t) header_ptr->package_size - 1, header_ptr->checksum);
+                                        // если проскочил некорректный заголовок - сбрасываем состояние
+                                        if((header_ptr->package_size < (int)sizeof(package_header)) || (header_ptr->package_size > max_package_size))
+                                        {
+                                            lookup_start_pos = (start_pos + 1) % max_package_size;
+                                            header_ptr = nullptr;
+                                            start_pos = -1;
+                                            return;
+                                        }
+                                        uint8_t size = header_ptr->package_size - 1;
+					checksum_t calculated = get_checksum((uint8_t *) &buffer[start_pos], size, header_ptr->checksum);
 					checksum_t received = buffer[end_pos - 1];
 
 					if (calculated == received)
