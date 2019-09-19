@@ -134,14 +134,14 @@ private:
 		datagram_arrived((uint8_t *)&((package<char> *)p)->payload, p->package_size);
 	}
 	
-protected:
+public:
 	template<class t>
 	size_t sufficient_size()
 	{
 		return slip::sufficient_buffer_size<t>();
 	}
 	
-	size_t encode(void *src, size_t srclen, void *dst, size_t dstlen)
+	size_t encode(const void *src, size_t srclen, void *dst, size_t dstlen)
 	{
 		return framer.encode_packet(src, srclen, dst, dstlen);
 	}
