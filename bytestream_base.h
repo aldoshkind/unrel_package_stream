@@ -35,11 +35,11 @@ public:
 		}
 	}
 	
-	virtual uint8_t *get_data() = 0;
+	virtual void *get_data() = 0;
 	virtual size_t get_size() = 0;
 	virtual void clear_data() = 0;
 	
-	virtual int send(uint8_t *data, size_t size) = 0;
+	virtual int send(void *data, size_t size) = 0;
 	
 protected:
 	void notify_data_arrived()

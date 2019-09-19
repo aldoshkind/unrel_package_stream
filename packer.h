@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "slip.h"
+
 #if (__cplusplus >= 201103L)
 #include <limits>
 #endif
@@ -15,12 +17,12 @@
 
 typedef uint8_t checksum_t;
 
-static checksum_t get_checksum(uint8_t *data, size_t size, checksum_t initial_value = 0)
+static checksum_t get_checksum(void *data, size_t size, checksum_t initial_value = 0)
 {
 	checksum_t cs = initial_value;
 	for (size_t i = 0; i < size; i += 1)
 	{
-		uint8_t byte = *((uint8_t *) data + i);
+		uint8_t byte = *((uint8_t *)data + i);
 		cs ^= byte;
 		cs += 1;
 	}
@@ -111,11 +113,7 @@ class unpacker
 public:
 	unpacker()
 	{
-		memset(buffer, 0, sizeof(buffer));
-		start_pos = -1;
-		lookup_start_pos = 0;
-		push_pos = 0;
-		header_ptr = NULL;
+		//
 	}
 
 	virtual ~unpacker(){}
@@ -129,129 +127,64 @@ public:
 	}
 
 private:
-	char buffer[max_package_size * 2];
-
-	int start_pos;
-	int lookup_start_pos;
-	int push_pos;
-
-	package_header *header_ptr;
-
-	int available()
-	{
-		int ppos = ((push_pos > start_pos) ? push_pos : (push_pos + max_package_size));
-		int shift = ppos - start_pos;
-		return shift;
-	}
-
-	int find_start(int read_pos)
-	{
-		int start = -1;
-		for (int i = read_pos; i != push_pos; i = (i + 1) % max_package_size)
-		{
-			// wait for package start
-			if (buffer[i] == package_magic)
-			{
-				start = i;
-				//printf("start at %d\n", start);
-				break;
-			}
-		}
-		return start;
-	}
+	slip::slip<max_package_size> framer;	
 
 	void package_ready(package_header *p)
 	{
 		datagram_arrived((uint8_t *)&((package<char> *)p)->payload, p->package_size);
 	}
 	
+protected:
+	template<class t>
+	size_t sufficient_size()
+	{
+		return slip::sufficient_buffer_size<t>();
+	}
+	
+	size_t encode(void *src, size_t srclen, void *dst, size_t dstlen)
+	{
+		return framer.encode_packet(src, srclen, dst, dstlen);
+	}
+	
+private:
 	virtual void datagram_arrived(uint8_t *data, size_t size) = 0;
 
 	void push_byte(char b)
 	{
-		buffer[push_pos] = b;
-		buffer[push_pos + max_package_size] = b;
-		push_pos = (push_pos + 1) % max_package_size;
-
-		for (;;)
+		framer.push_byte(b);
+		if(framer.is_package_ready() == false)
 		{
-			if (start_pos == -1)
-			{
-				start_pos = find_start(lookup_start_pos);
-				if (start_pos == -1)
-				{
-					lookup_start_pos = push_pos;
-					return;
-				}
-				lookup_start_pos = start_pos + 1;
-			}
-
-			if (header_ptr == nullptr)
-			{
-				if (available() >= (int)sizeof(package_header))
-				{
-					checksum_t calculated = get_checksum((uint8_t *) &buffer[start_pos], sizeof(package_header) - 1);
-					header_ptr = (package_header *) &buffer[start_pos];
-					checksum_t received = header_ptr->checksum;
-
-					if ((calculated != received) || (header_ptr->package_size < (int)sizeof(package_header)) || (header_ptr->package_size > max_package_size))
-					{
-						//printf("wrong header crc\n");
-						lookup_start_pos = (start_pos + 1) % max_package_size;
-						header_ptr = nullptr;
-						start_pos = -1;
-						continue;
-					}
-					else
-					{
-						//printf("header ok\n");
-					}
-				}
-				else
-				{
-					//printf("not enough data for header\n");
-					return;
-				}
-			}
-
-			if (header_ptr != nullptr)
-			{
-				if (available() >= header_ptr->package_size)
-				{
-					int end_pos = start_pos + header_ptr->package_size;
-                                        // если проскочил некорректный заголовок - сбрасываем состояние
-                                        if((header_ptr->package_size < (int)sizeof(package_header)) || (header_ptr->package_size > max_package_size))
-                                        {
-                                            lookup_start_pos = (start_pos + 1) % max_package_size;
-                                            header_ptr = nullptr;
-                                            start_pos = -1;
-                                            return;
-                                        }
-                                        uint8_t size = header_ptr->package_size - 1;
-					checksum_t calculated = get_checksum((uint8_t *) &buffer[start_pos], size, header_ptr->checksum);
-					checksum_t received = buffer[end_pos - 1];
-
-					if (calculated == received)
-					{
-						//printf("package\n");
-						lookup_start_pos = (start_pos + 1) % max_package_size;
-						package_ready((package_header *) &buffer[start_pos]);
-					}
-					else
-					{
-						//printf("wrong body crc\n");
-						lookup_start_pos = (start_pos + 1) % max_package_size;
-					}
-					header_ptr = nullptr;
-					start_pos = -1;
-				}
-				else
-				{
-					//printf("not enough data for body: %d/%d\n", available(), header_ptr->package_size);
-					return;
-				}
-			}
+			return;
 		}
+		
+		size_t size = framer.get_data_size();
+		if(size < sizeof(package_header))
+		{
+			return;
+		}
+		
+		package_header *h = (package_header *)framer.get_data();
+		checksum_t header_checksum_calculated = get_checksum(h, sizeof(package_header) - 1);
+		checksum_t header_checksum_received = h->checksum;		
+		if(header_checksum_received != header_checksum_calculated)
+		{
+			return;			
+		}
+		
+		if(size != h->package_size)
+		{
+			return;			
+		}
+		
+		checksum_t package_checksum_calculated = get_checksum(h, size - sizeof (checksum_t), h->checksum);
+		checksum_t package_checksum_received = *(checksum_t *)(((char *)h) + size - sizeof (checksum_t));
+		
+		if(package_checksum_received != package_checksum_calculated)
+		{
+			return;			
+		}
+		
+		package_ready(h);
 	}
 };
 
