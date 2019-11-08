@@ -7,7 +7,11 @@
 
 #include "slip.h"
 
-#if (__cplusplus >= 201103L)
+#if (__cplusplus >= 201103L) && !defined(ARDUINO)
+#define DESKTOP_MODE
+#endif
+
+#ifdef DESKTOP_MODE
 #include <limits>
 #endif
 
@@ -82,7 +86,7 @@ struct __attribute__((packed)) package
 	payload_type payload;
 	checksum_t checksum;
 
-#if (__cplusplus >= 201103L)
+#ifdef DESKTOP_MODE
 	static_assert(sizeof(payload_type)
 					  < std::numeric_limits<decltype(package_header::package_size)>::max() - sizeof(package_header) - sizeof(checksum),
 				  "payload too big");
