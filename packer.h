@@ -122,7 +122,7 @@ public:
 
 	virtual ~unpacker(){}
 	
-	void push_data(char *data, uint8_t size)
+	void push_data(char *data, size_t size)
 	{
 		for (int i = 0; i < size; i += 1)
 		{
@@ -130,9 +130,8 @@ public:
 		}
 	}
 
-private:
 	slip::slip<max_package_size> framer;	
-
+private:
 	void package_ready(package_header *p)
 	{
 		datagram_arrived((uint8_t *)&((package<char> *)p)->payload, p->package_size);

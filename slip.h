@@ -28,6 +28,27 @@ public:
 	slip() {}
 	~slip() {}
 
+	uchar encode_byte(uchar val, void *dst)
+	{
+		switch(val)
+		{
+		case symbol_end:
+			((uchar *)dst)[0] = symbol_esc;
+			((uchar *)dst)[1] = symbol_esc_end;
+			return 2;
+			break;
+		case symbol_esc:
+			((uchar *)dst)[0] = symbol_esc;
+			((uchar *)dst)[1] = symbol_esc_esc;
+			return 2;
+			break;
+		default:
+			((uchar *)dst)[0] = val;
+			return 1;
+		}
+		return 0;
+	}
+
     size_t encode_packet(const void *src, size_t srclen, void *dst, size_t dstlen)
 	{
 		uchar *buf = (uchar *)src;
@@ -45,19 +66,7 @@ public:
 		for(size_t i = 0 ; i < srclen ; i += 1)
 		{
 			uchar val = buf[i];
-			switch(val)
-			{
-			case symbol_end:
-				dst_buf[dst_pos++] = symbol_esc;
-				dst_buf[dst_pos++] = symbol_esc_end;
-				break;
-			case symbol_esc:
-				dst_buf[dst_pos++] = symbol_esc;
-				dst_buf[dst_pos++] = symbol_esc_esc;
-				break;
-			default:
-				dst_buf[dst_pos++] = buf[i];
-			}
+			dst_pos += encode_byte(val, dst_buf + dst_pos);
 		}
 		dst_buf[dst_pos++] = symbol_end;
 		return dst_pos;
