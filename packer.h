@@ -9,7 +9,7 @@
 #include <limits>
 #endif
 
-#if !(__cplusplus > 201103L)
+#if (__cplusplus < 201103L)
 #define nullptr NULL
 #endif
 
